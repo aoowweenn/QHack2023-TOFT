@@ -12,6 +12,7 @@ pip install -r requirements_cpu.txt
 
 # try gpu below
 pip install cuquantum-cu11
+pip install cupy-cuda11x
 
 pip install "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install pennylane-lightning[gpu] 

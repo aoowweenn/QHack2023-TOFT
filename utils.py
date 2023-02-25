@@ -91,35 +91,25 @@ def impl_get_xstr(A):
     C = jnp.vectorize(lambda a,b: bit_count(jnp.uint32(a & b)).astype(jnp.uint8), signature='(i,j),(i,j)->(i,j)')(_A0, _A1)
     return C
 
-# @jax.jit # TracerIntegerConversionError: The __index__() method was called on the JAX Tracer object
-def _prepare_sparse_mat_input(coeffs, num_state, y_counts, x_u, x_indices, Zs_ints):
+def _prepare_sparse_mat_input(coeffs, num_state, y_counts, Xs_ints, Zs_ints):
     N = len(coeffs)
-    N_u = len(x_u)
 
-    data = np.zeros((num_state*N_u), dtype=np.complex128) # jnp
-    indices = np.empty((num_state*N_u), dtype=np.uint32) # jnp
-    indptr = np.arange(0, num_state*N_u+1, N_u) # jnp
-
-    for out_idx in range(num_state):
-        idx = out_idx * N_u
-        for i in range(N):
-            u_idx = x_indices[i]
-            tot_idx = idx + u_idx
-            new_in_idx = out_idx ^ x_u[u_idx]
-            indices[tot_idx] = new_in_idx
-            # indices = indices.at[tot_idx].set(new_in_idx)
-        
-            neg_phase_count = bit_count(jnp.uint32(new_in_idx & Zs_ints[i])) #.astype(jnp.uint8)
-            phase = 1j ** np.asarray((y_counts[i] + (neg_phase_count << 1)) % 4) # need np.asarray ?
-            data[tot_idx] += coeffs[i]*phase
-            # data = data.at[tot_idx].add(coeffs[i]*phase)
+    out_indices = jnp.arange(num_state)
     
-    return data, indices, indptr
+    indices = out_indices[:, None] ^ Xs_ints[None, :]
+    
+    neg_phase_count = jnp.vectorize(lambda a,b: bit_count(jnp.uint32(a & b)).astype(jnp.uint8), signature='(i,j),(j)->(i,j)')(indices, Zs_ints)
+    phase = jnp.vectorize(lambda a,b: 1j ** ((b + (a << 1)) % 4), signature='(i,j),(j)->(i,j)')(neg_phase_count, y_counts)
+    data = jnp.vectorize(lambda a,b: a * b, signature='(i,j),(j)->(i,j)')(phase, coeffs)
+    
+    indptr = jnp.arange(0, num_state*N+1, N)
+    
+    return data.flatten(), indices.flatten(), indptr
 
 # @jax.jit # ConcretizationTypeError (jnp.unique)
 def impl_to_sparse(coeffs, num_state, y_counts, Xs_ints, Zs_ints):
-    x_u, x_indices, x_counts = jnp.unique(Xs_ints, axis=0, return_inverse=True, return_counts=True)
-    data, indices, indptr = _prepare_sparse_mat_input(coeffs, num_state, y_counts, x_u, x_indices, Zs_ints)
+    # x_u, x_indices, x_counts = jnp.unique(Xs_ints, axis=0, return_inverse=True, return_counts=True)
+    data, indices, indptr = _prepare_sparse_mat_input(coeffs, num_state, y_counts, Xs_ints, Zs_ints)
     return data, indices, indptr
 
 # @jax.jit # TracerIntegerConversionError: The __index__() method was called on the JAX Tracer object
@@ -131,6 +121,7 @@ def reduce_coeffs(A_coeffs, indices, N_simplified):
         ## A_coeffs_simplified = A_coeffs_simplified.at[indices[i]].add(A_coeffs[i])
     
     # ref: https://stackoverflow.com/questions/55735716/how-to-sum-up-for-each-distinct-value-c-in-array-x-all-elements-yi-where-xi
+    # TODO: use sparse matrix method directly in impl_simplify
     np.add.at(A_coeffs_simplified, indices, A_coeffs)
     return A_coeffs_simplified
 
