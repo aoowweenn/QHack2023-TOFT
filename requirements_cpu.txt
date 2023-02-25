@@ -1,0 +1,4 @@
+jax==0.4.4
+jaxlib==0.4.4
+PennyLane==0.28.0
+PennyLane-Lightning==0.28.2

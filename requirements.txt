@@ -1,0 +1,7 @@
+numpy==1.23.5
+scipy==1.10.1
+matplotlib==3.7.0
+ipykernel==6.21.2
+pyscf==2.1.1
+qutip==4.7.1
+openfermion==1.5.1
