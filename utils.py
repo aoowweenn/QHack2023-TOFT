@@ -126,9 +126,12 @@ def impl_to_sparse(coeffs, num_state, y_counts, Xs_ints, Zs_ints):
 def reduce_coeffs(A_coeffs, indices, N_simplified):
     N = len(A_coeffs)
     A_coeffs_simplified = np.zeros(N_simplified, dtype=A_coeffs.dtype)
-    for i in range(N):
-        A_coeffs_simplified[indices[i]] += A_coeffs[i]
-        # A_coeffs_simplified = A_coeffs_simplified.at[indices[i]].add(A_coeffs[i])
+    # for i in range(N):
+        # A_coeffs_simplified[indices[i]] += A_coeffs[i]
+        ## A_coeffs_simplified = A_coeffs_simplified.at[indices[i]].add(A_coeffs[i])
+    
+    # ref: https://stackoverflow.com/questions/55735716/how-to-sum-up-for-each-distinct-value-c-in-array-x-all-elements-yi-where-xi
+    np.add.at(A_coeffs_simplified, indices, A_coeffs)
     return A_coeffs_simplified
 
 # @jax.jit # ConcretizationTypeError: Abstract tracer value encountered where concrete value is expected
