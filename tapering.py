@@ -37,7 +37,7 @@ def find_atom_orb_rep(atompos, orbdirect, rotations, round=8):
             rep_list.append([new_atom_pos, new_orb_direction])
     return rep_list
 
-def _get_rep_dict(tags, new_pos, pos, mode='atom'):
+def _get_rep_dict(tags, new_pos, pos, rtol=1e-3, atol=1e-6, mode='atom'):
     rep_dict = {}
     for pair in tags:
         if 'orb' in mode:
@@ -45,10 +45,10 @@ def _get_rep_dict(tags, new_pos, pos, mode='atom'):
             pair = range(len(pair))
         for j in pair:
             for i in pair:
-                if np.allclose(new_pos[j], pos[i]):
+                if np.allclose(new_pos[j], pos[i], rtol=rtol, atol=atol):
                     rep_dict[(i, j)] = 1
                     break
-                elif np.allclose(new_pos[j], pos[i]):
+                elif (mode != 'atom') and np.allclose(new_pos[j], -pos[i], rtol=rtol, atol=atol):
                     rep_dict[(i, j)] = -1
                     break
                 if i == pair[-1]: # no matches found
@@ -82,6 +82,7 @@ def get_ao_rep(n_ao, rotations, atom_tags, ao_dict, orbdir_tags, atompos, orbdir
         ## from atompos construct atom_rep
         # print("rep_mat after orb", rep_mat)
         atom_rep_dict = _get_rep_dict(atom_tags, new_atom_pos, atompos)
+        # print(atom_rep_dict)
         if not atom_rep_dict: continue
         ao_rep_list = []
         for (i_label, j_label) in atom_rep_dict:
